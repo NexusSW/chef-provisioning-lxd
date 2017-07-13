@@ -18,8 +18,11 @@ class Chef
         end
 
         def host_address
-          _, address = driver_url.split(':', 2)
-          address = 'https://localhost:8443' unless address
+          _, url = driver_url.split(':', 2)
+          address, port = url.split(',', 2)
+          address = 'localhost' unless address
+          port = 8443 unless port
+          address = "https://#{address}:#{port}"
           address
         end
 
@@ -71,7 +74,7 @@ class Chef
           username = machine_options['username']
           ssh_options = {
             auth_methods: ['publickey'],
-            keys: [ get_private_key('bootstrapkey') ],
+            keys: [get_private_key('bootstrapkey')],
           }
           transport = Chef::Provisioning::Transport::SSH.new(@lxd.container_hostname(server_id), username, ssh_options, {}, config)
           convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options[:convergence_options], {})
