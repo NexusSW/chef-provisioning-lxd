@@ -1,7 +1,7 @@
 class Chef
   module Provisioning
     module LXDDriver
-      VERSION = '0.1.0'.freeze
+      VERSION = '0.1.15'.freeze
     end
   end
 end

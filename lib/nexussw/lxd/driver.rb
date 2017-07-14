@@ -4,7 +4,8 @@ class NexusSW
   module LXD
     class Driver
       def initialize(host_address, options)
-        hkoptions = options.clone
+        hkoptions = {}
+        hkoptions = options.clone if options
         hkoptions[:api_endpoint] = host_address
         hkoptions[:auto_sync] = true
         @lxd = Hyperkit::Client.new(hkoptions)
