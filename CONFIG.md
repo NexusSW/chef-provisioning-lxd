@@ -59,3 +59,11 @@ from https://github.com/lxc/lxd/blob/master/doc/rest-api.md
 200	Success
 400	Failure
 401	Cancelled
+
+from hyperkit:
+http://jeffshantz.github.io/hyperkit/
+mkdir -p ~/.config/lxc
+openssl req -x509 -newkey rsa:2048 -keyout ~/.config/lxc/client.key.secure -out ~/.config/lxc/client.crt -days 3650
+openssl rsa -in ~/.config/lxc/client.key.secure -out ~/.config/lxc/client.key
+
+lxc config trust add ~/.config/lxc/client.crt

@@ -5,7 +5,7 @@ require 'chef/provisioning/lxd_driver/version'
 
 Gem::Specification.new do |spec|
   spec.name          = 'chef-provisioning-lxd'
-  spec.version       = Testgem::VERSION
+  spec.version       = Chef::Provisioning::LXDDriver::VERSION
   spec.authors       = ['Sean Zachariasen']
   spec.email         = ['thewyzard@hotmail.com']
 

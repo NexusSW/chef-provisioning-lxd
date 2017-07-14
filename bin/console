@@ -1,7 +1,8 @@
-#!/usr/bin/env ruby
+#!/usr/bin/ruby
 
-require "bundler/setup"
-require "testgem"
+require 'bundler/setup'
+#require 'nexussw/lxd/driver'
+#require 'chef/provisioning/lxd_driver/driver'
 
 # You can add fixtures and/or initialization code here to make experimenting
 # with your gem easier. You can also use a different console, if you like.
@@ -10,5 +11,7 @@ require "testgem"
 # require "pry"
 # Pry.start
 
-require "irb"
+require 'irb'
 IRB.start
+
+EOF
