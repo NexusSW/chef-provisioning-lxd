@@ -31,7 +31,7 @@ class NexusSW
       def waitforserver()
         mylist = @waitlist.clone
         @waitlist -= mylist
-        mylist.each { |x|
+        mylist.each { |id|
           begin
             @lxd.wait_for_operation(id)
           rescue
@@ -93,6 +93,7 @@ class NexusSW
       end
 
       def container_status(container_id)
+        waitforserver
         map_statuscode @lxd.container_state(container_id)['status_code']
       end
 

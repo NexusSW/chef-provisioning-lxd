@@ -59,7 +59,7 @@ class Chef
             end
           end
 
-          if @lxd.container_status(server_id) != 'running'
+          unless @lxd.container_status(server_id) == 'running'
             action_handler.perform_action "Waiting for container #{server_id}" do
               @lxd.start_container(server_id)
             end

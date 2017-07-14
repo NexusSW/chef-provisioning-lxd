@@ -17,15 +17,19 @@ describe 'Chef Provisioning LXD Driver' do
       expect(lxd.container_exists?('idontexist')).not_to be true
     end
 
+    it 'fails creating a container asynchronously with bad options' do
+      expect{ lxd.create_container('iwontexist', alias: 'ubububuntu-idontexist')}.to raise_error(Hyperkit::InternalServerError)
+    end
+
     it 'creates a container' do
-      expect(lxd.create_container(test_name, alias: 'ubuntu-14.04')).to be test_name
+      expect(lxd.create_container(test_name, alias: 'ubuntu-14.04')).to eq test_name
     end
 
     it 'detects an existing container' do
       expect(lxd.container_exists?(test_name)).to be true
     end
 
-    it 'can start a container asyncronously' do
+    it 'can start a container asynchronously' do
       expect(lxd.start_container_async(test_name))
     end
 
