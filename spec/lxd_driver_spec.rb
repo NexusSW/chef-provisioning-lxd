@@ -7,7 +7,10 @@ require 'spec_helper'
 
 describe 'Chef Provisioning LXD Driver' do
   let(:test_name) { 'lxd-chef-driver-test' }
-  let(:lxd) { NexusSW::LXD::Driver.new 'https://localhost:8443', verify_ssl: false }
+  let(:test_name2) { 'lxd-chef-driver-test2' }
+  let(:host_address) { 'https://localhost:8443' }
+  let(:lxd) { NexusSW::LXD::Driver.new host_address, verify_ssl: false }
+  let(:transport) { Chef::Provisioning::LXDDriver::LocalTransport.new lxd, test_name }
   context 'Core Implementation' do
     it 'has a version number' do
       expect(NexusSW::LXD::VERSION).not_to be nil
@@ -23,6 +26,7 @@ describe 'Chef Provisioning LXD Driver' do
 
     it 'creates a container' do
       expect(lxd.create_container(test_name, alias: 'ubuntu-14.04')).to eq test_name
+      expect(lxd.create_container(test_name2, alias: 'ubuntu-14.04')).to eq test_name2
     end
 
     it 'detects an existing container' do
@@ -39,13 +43,34 @@ describe 'Chef Provisioning LXD Driver' do
     end
 
     it 'can start a container normally' do
-      lxd.start_container test_name
-      expect(lxd.container_status(test_name)).to eq 'running'
+      lxd.start_container test_name2
+      expect(lxd.container_status(test_name2)).to eq 'running'
+    end
+
+    it 'can execute a command in the container' do
+      expect(transport.execute(['ls', '-al', '/'])).to be_truthy
+    end
+
+    it 'can output to a file' do
+      expect{ transport.write_file('/tmp/somerandomfile.tmp', 'some random content') }.not_to raise_error
+    end
+
+    it 'can upload a file' do
+      expect{ transport.upload_file('/etc/passwd', '/tmp/passwd.tmp') }.not_to raise_error
+    end
+
+    it 'can download a file' do
+      expect{ transport.download_file('/etc/group', '/tmp/rspectest.tmp') }.not_to raise_error
+    end
+
+    it 'can read a file' do
+      expect(transport.read_file('/tmp/passwd.tmp')).to include('root:')
     end
 
     it 'can delete a running container' do
+      lxd.delete_container test_name2
+      expect(lxd.container_exists?(test_name2)).to be false
       lxd.delete_container test_name
-      expect(lxd.container_exists?(test_name)).to be false
     end
   end
 end

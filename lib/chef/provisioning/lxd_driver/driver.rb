@@ -83,12 +83,16 @@ class Chef
 
         def machine_for(machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
-          username = machine_options['username']
-          ssh_options = {
-            auth_methods: ['publickey'],
-            keys: [get_private_key('bootstrapkey')],
-          }
-          transport = Chef::Provisioning::Transport::SSH.new(@lxd.container_hostname(machine_id), username, ssh_options, {}, config)
+          transport = if host_address.start_with?('https://localhost:')
+                        Chef::Provisioning::LXDDriver::LocalTransport.new(@lxd, machine_id)
+                      else
+                        username = machine_options['username']
+                        ssh_options = {
+                          auth_methods: ['publickey'],
+                          keys: [get_private_key('bootstrapkey')],
+                        }
+                        Chef::Provisioning::Transport::SSH.new(@lxd.container_hostname(machine_id), username, ssh_options, {}, config)
+                      end
           convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'], {})
           Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport, convergence_strategy)
         end
