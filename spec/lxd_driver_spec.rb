@@ -10,7 +10,7 @@ describe 'Chef Provisioning LXD Driver' do
   let(:test_name2) { 'lxd-chef-driver-test2' }
   let(:host_address) { 'https://localhost:8443' }
   let(:lxd) { NexusSW::LXD::Driver.new host_address, verify_ssl: false }
-  let(:transport) { Chef::Provisioning::LXDDriver::LocalTransport.new lxd, test_name }
+  let(:transport) { Chef::Provisioning::LXDDriver::LocalTransport.new lxd, test_name2 }
   context 'Core Implementation' do
     it 'has a version number' do
       expect(NexusSW::LXD::VERSION).not_to be nil
@@ -48,7 +48,12 @@ describe 'Chef Provisioning LXD Driver' do
     end
 
     it 'can execute a command in the container' do
-      expect(transport.execute(['ls', '-al', '/'])).to be_truthy
+      expect{ transport.execute(['ls', '-al', '/']).error! }.not_to raise_error
+    end
+
+    it 'remaps localhost to an adapter ip' do
+      expect(transport.make_url_available_to_remote('chefzero://localhost:1234')).not_to include('localhost')
+      expect(transport.make_url_available_to_remote('chefzero://127.0.0.1:1234')).not_to include('127.0.0.1')
     end
 
     it 'can output to a file' do

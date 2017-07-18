@@ -1,3 +1,4 @@
+
 require 'hyperkit'
 
 class NexusSW
@@ -29,12 +30,19 @@ class NexusSW
         }.freeze
       end
 
-      def waitforserver()
+      attr_reader :lxd
+
+      def waitforserver(container_name)
         mylist = @waitlist.clone
         @waitlist -= mylist
-        mylist.each { |id|
+        mylist.each { |v|
           begin
-            @lxd.wait_for_operation(id)
+            @lxd.wait_for_operation(v[:id]) if v[:id]
+            if v[:name] == container_name && v[:wait]
+              waitforstatus v[:name], v[:wait]
+            elsif v[:name] && v[:wait]
+              @waitlist << v
+            end
           rescue
             nil
           end
@@ -59,31 +67,32 @@ class NexusSW
 
         hkoptions = {}
         hkoptions = container_options.clone if container_options
-        hkoptions[:sync] = false
-        @waitlist << @lxd.create_container(container_name, hkoptions).id
+        # hkoptions[:sync] = false    # I finally hit the race condition after a couple of days
+        @waitlist << { id: @lxd.create_container(container_name, hkoptions).id }
         container_name
       end
 
       # Quick Blind fire - don't wait -  don't error - success is optional
       def start_container_async(container_id)
-        @waitlist << @lxd.start_container(container_id, sync: false).id
+        @waitlist << { id: @lxd.start_container(container_id, sync: false).id, name: container_id, wait: 'running' }
       end
 
       def start_container(container_id)
-        waitforserver
+        waitforserver container_id
         @lxd.start_container(container_id)
         waitforstatus container_id, 'running'
       end
 
       def stop_container(container_id)
-        waitforserver
+        waitforserver container_id
         @lxd.stop_container(container_id)
         waitforstatus container_id, 'stopped'
       end
 
       def delete_container(container_id)
-        waitforserver
+        waitforserver container_id
         @lxd.stop_container(container_id, force: true)
+        waitforstatus container_id, 'stopped'
         @lxd.delete_container(container_id)
       end
 
@@ -94,7 +103,7 @@ class NexusSW
       end
 
       def container_status(container_id)
-        waitforserver
+        waitforserver container_id
         map_statuscode @lxd.container_state(container_id)['status_code']
       end
 

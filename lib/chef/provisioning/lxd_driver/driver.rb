@@ -1,9 +1,11 @@
+require 'chef/mash'
 require 'chef/provisioning/driver'
 require 'chef/provisioning/transport/ssh'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/lxd_driver/version'
 require 'nexussw/lxd/driver'
+require 'chef/provisioning/lxd_driver/transport'
 
 class Chef
   module Provisioning
@@ -27,7 +29,7 @@ class Chef
           @lxd = NexusSW::LXD::Driver.new(host_address, clone_mash(driver_options['driver_options']))
         end
 
-        def host_address()
+        def host_address
           _, address = driver_url.split(':', 2)
           address
         end
@@ -83,7 +85,7 @@ class Chef
 
         def machine_for(machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
-          transport = if host_address.start_with?('https://localhost:')
+          transport = if host_address.start_with?('https://localhost:', 'https://127.0.0.1:')
                         Chef::Provisioning::LXDDriver::LocalTransport.new(@lxd, machine_id)
                       else
                         username = machine_options['username']
