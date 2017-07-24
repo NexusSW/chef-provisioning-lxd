@@ -6,6 +6,7 @@ require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/lxd_driver/version'
 require 'nexussw/lxd/driver'
 require 'chef/provisioning/lxd_driver/transport'
+require 'pp'
 
 class Chef
   module Provisioning
@@ -20,18 +21,20 @@ class Chef
           address, port = url.split(',', 2) if url
           address = 'localhost' unless address
           port = 8443 unless port
-          address = "https://#{address}:#{port}"
+          address = "#{address},#{port}"
           ["lxd:#{address}", config]
         end
 
         def initialize(url, config)
           super(url, config)
-          @lxd = NexusSW::LXD::Driver.new(host_address, clone_mash(driver_options['driver_options']))
+          # pp 'Driver Options: ', config
+          @lxd = NexusSW::LXD::Driver.new(host_address, clone_mash(driver_options))
         end
 
         def host_address
           _, address = driver_url.split(':', 2)
-          address
+          host, port = address.split(',', 2)
+          "https://#{host}:#{port}"
         end
 
         def clone_mash(mash)
@@ -54,6 +57,7 @@ class Chef
           end
           unless machine_id
             action_handler.perform_action "Creating container #{machine_spec.name} with options #{machine_options}" do
+              raise "Container #{machine_spec.name} already exists" if @lxd.container_exists?(machine_spec.name)
               machine_id = @lxd.create_container(machine_spec.name, clone_mash(machine_options))
               machine_spec.reference = {
                 'driver_url' => driver_url,

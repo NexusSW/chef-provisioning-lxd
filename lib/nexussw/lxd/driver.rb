@@ -68,7 +68,8 @@ class NexusSW
         hkoptions = {}
         hkoptions = container_options.clone if container_options
         # hkoptions[:sync] = false    # I finally hit the race condition after a couple of days
-        @waitlist << { id: @lxd.create_container(container_name, hkoptions).id }
+        #@waitlist << { id: @lxd.create_container(container_name, hkoptions).id }
+        @lxd.create_container(container_name, hkoptions)
         container_name
       end
 
