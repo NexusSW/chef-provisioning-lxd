@@ -41,6 +41,7 @@ class NexusSW
             if v[:name] == container_name && v[:wait]
               waitforstatus v[:name], v[:wait]
             elsif v[:name] && v[:wait]
+              v.delete :id
               @waitlist << v
             end
           rescue
@@ -115,6 +116,13 @@ class NexusSW
       def map_statuscode(status_code)
         # TODO: could break this off into its own class as well
         @status_map[status_code.to_i]
+      end
+
+      def ensure_profiles(profiles = {})
+        profile_list = @lxd.profiles
+        profiles.each do |name,profile|
+          @lxd.create_profile name, profile unless profile_list.index name
+        end
       end
     end
   end

@@ -17,12 +17,10 @@ class Chef
         end
 
         def self.canonicalize_url(driver_url, config)
-          _, url = driver_url.split(':', 2)
-          address, port = url.split(',', 2) if url
-          address = 'localhost' unless address
-          port = 8443 unless port
-          address = "#{address},#{port}"
-          ["lxd:#{address}", config]
+          _, address, port = driver_url.split(':', 3)
+          address ||= 'localhost'
+          port ||= 8443
+          ["lxd:#{address}:#{port}", config]
         end
 
         def initialize(url, config)
@@ -31,9 +29,10 @@ class Chef
           @lxd = NexusSW::LXD::Driver.new(host_address, clone_mash(driver_options))
         end
 
+        attr_reader :lxd
+
         def host_address
-          _, address = driver_url.split(':', 2)
-          host, port = address.split(',', 2)
+          _, host, port = driver_url.split(':', 3)
           "https://#{host}:#{port}"
         end
 
@@ -99,7 +98,7 @@ class Chef
                         }
                         Chef::Provisioning::Transport::SSH.new(@lxd.container_hostname(machine_id), username, ssh_options, {}, config)
                       end
-          convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'], {})
+          convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'] || {}, {})
           Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport, convergence_strategy)
         end
 
