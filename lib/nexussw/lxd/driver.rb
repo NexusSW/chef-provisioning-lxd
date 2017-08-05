@@ -9,7 +9,7 @@ class NexusSW
         hkoptions = options.clone if options
         hkoptions[:api_endpoint] = host_address
         hkoptions[:auto_sync] = true
-        @lxd = Hyperkit::Client.new(hkoptions)
+        @hk = Hyperkit::Client.new(hkoptions)
         @waitlist = []
         @status_map = {
           100	=> 'created', # 'created',
@@ -30,14 +30,12 @@ class NexusSW
         }.freeze
       end
 
-      attr_reader :lxd
-
       def waitforserver(container_name)
         mylist = @waitlist.clone
         @waitlist -= mylist
         mylist.each { |v|
           begin
-            @lxd.wait_for_operation(v[:id]) if v[:id]
+            @hk.wait_for_operation(v[:id]) if v[:id]
             if v[:name] == container_name && v[:wait]
               waitforstatus v[:name], v[:wait]
             elsif v[:name] && v[:wait]
@@ -69,33 +67,33 @@ class NexusSW
         hkoptions = {}
         hkoptions = container_options.clone if container_options
         # hkoptions[:sync] = false    # I finally hit the race condition after a couple of days
-        #@waitlist << { id: @lxd.create_container(container_name, hkoptions).id }
-        @lxd.create_container(container_name, hkoptions)
+        #@waitlist << { id: @hk.create_container(container_name, hkoptions).id }
+        @hk.create_container(container_name, hkoptions)
         container_name
       end
 
       # Quick Blind fire - don't wait -  don't error - success is optional
       def start_container_async(container_id)
-        @waitlist << { id: @lxd.start_container(container_id, sync: false).id, name: container_id, wait: 'running' }
+        @waitlist << { id: @hk.start_container(container_id, sync: false).id, name: container_id, wait: 'running' }
       end
 
       def start_container(container_id)
         waitforserver container_id
-        @lxd.start_container(container_id)
+        @hk.start_container(container_id)
         waitforstatus container_id, 'running'
       end
 
       def stop_container(container_id)
         waitforserver container_id
-        @lxd.stop_container(container_id)
+        @hk.stop_container(container_id)
         waitforstatus container_id, 'stopped'
       end
 
       def delete_container(container_id)
         waitforserver container_id
-        @lxd.stop_container(container_id, force: true)
+        @hk.stop_container(container_id, force: true)
         waitforstatus container_id, 'stopped'
-        @lxd.delete_container(container_id)
+        @hk.delete_container(container_id)
       end
 
       def container_exists?(container_id)
@@ -106,7 +104,7 @@ class NexusSW
 
       def container_status(container_id)
         waitforserver container_id
-        map_statuscode @lxd.container_state(container_id)['status_code']
+        map_statuscode @hk.container_state(container_id)['status_code']
       end
 
       def container_hostname(container_id)
@@ -119,10 +117,14 @@ class NexusSW
       end
 
       def ensure_profiles(profiles = {})
-        profile_list = @lxd.profiles
+        profile_list = @hk.profiles
         profiles.each do |name,profile|
-          @lxd.create_profile name, profile unless profile_list.index name
+          @hk.create_profile name, profile unless profile_list.index name
         end
+      end
+
+      def container(container_name)
+        @hk.container container_name
       end
     end
   end

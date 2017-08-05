@@ -36,6 +36,10 @@ class Chef
           "https://#{host}:#{port}"
         end
 
+        def host_name
+          driver_url.split(':',3)[1]
+        end
+
         def clone_mash(mash)
           retval = {}
           mash.each { |key, val| retval[key.to_sym] = val } if mash
@@ -86,19 +90,51 @@ class Chef
           machine_for(machine_spec, machine_options)
         end
 
+        # machine_spec = Provisioning.chef_managed_entry_store ***(chef_server)*** .get(:machine, name)
+        # returns [remote_id, remote_driver] where the 'remote_transport.execute' is called with:
+        #   lxc exec remote_id:machine_id -- blah blah blah
+        # if remote_id is specified, then remote_driver is an lxd driver that supports remote_id:machine_id
+        # anything returned from here 'might' need files punted to it.
+        def remoteinfo
+          return nil if host_name == 'localhost'
+          myhost_driver_url = run_context.chef_provisioning.chef_managed_entry_store.get(:machine, host_name).driver_url
+          # raise 'No path to host!  Invalid root node specified in the recipe' unless myhost_driver_url
+          return nil unless myhost_driver_url
+          myhost_driver = run_context.chef_provisioning.driver_for myhost_driver_url
+          # raise 'No path to host!  Invalid root node specified in the recipe' unless myhost_driver
+          return nil unless myhost_driver
+          # if we didn't make it this far, and we're not localhost, then likely a new root needs specified in the recipe
+          # fallback driver knows how to exec on my lxd host, but could be deeply nested hosted_transports with multiple 'punts'
+          retval = [nil, myhost_driver]
+          # look deeper for a linked server
+          loop do
+            # we hit a non-lxd driver - which makes no sense to continue in the 'nesting' context - and transport.remote? is lxd specific
+            return retval unless myhost_driver_url.start_with?('lxd:')
+            # coup de grâce
+            retval = [host_name, myhost_driver] if myhost_driver.transport.remote?(host_name) # keep looking deeper (closer)
+
+            # move next
+            myhost_driver_hostname = myhost_driver_url.split(':', 3)[1]
+            return retval if myhost_driver_hostname == 'localhost'
+            myhost_driver_url = run_context.chef_provisioning.chef_managed_entry_store.get(:machine, myhost_driver_hostname).driver_url
+            return retval unless myhost_driver_url
+            myhost_driver = run_context.chef_provisioning.driver_for myhost_driver_url
+            return retval unless myhost_driver
+          end
+        end
+
         def machine_for(machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
-          transport = if host_address.start_with?('https://localhost:', 'https://127.0.0.1:')
-                        Chef::Provisioning::LXDDriver::LocalTransport.new(@lxd, machine_id)
-                      else
-                        username = machine_options['username']
-                        ssh_options = {
-                          auth_methods: ['publickey'],
-                          keys: [get_private_key('bootstrapkey')],
-                        }
-                        Chef::Provisioning::Transport::SSH.new(@lxd.container_hostname(machine_id), username, ssh_options, {}, config)
-                      end
-          convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'] || {}, {})
+          # local transport is the most efficient so try it first, always
+          transport = Chef::Provisioning::LXDDriver::LocalTransport.new(@lxd, machine_id, config) if host_name == 'localhost'
+          transport ||= Chef::Provisioning::LXDDriver::RemoteTransport.new(@lxd, remote_id, machine_id, config) if @lxd.is_a? ***INSERTDISCRIMINATORHERE***
+          # hosted transports 'might' need one or more punts - use as a last resort
+          remote_id, remote_transport = remoteinfo(machine_spec, machine_options) unless transport
+          transport ||= Chef::Provisioning::LXDDriver::HostedTransport.new(@lxd, remote_transport, remote_id, machine_id, config) if remote_transport
+
+          raise 'No path to host!  Invalid root node specified in the recipe' unless transport
+
+          convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'] || {}, config)
           Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport, convergence_strategy)
         end
 
