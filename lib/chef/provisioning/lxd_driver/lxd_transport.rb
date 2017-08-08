@@ -16,19 +16,6 @@ class Chef
           raise 'LXDTransport.execute not overidden'
         end
 
-        def remote?(host_name)
-          result = execute 'list', subcommand: 'remote'
-          result.error!
-          result.stdout.each_line do |line|
-            return true if line.start_with? "| #{host_name} "
-          end
-          false
-        end
-
-        def add_remote(host_name)
-          execute("add #{host_name} --accept-certificate", subcommand: 'remote').error! unless remote? host_name
-        end
-
         class LXDExecuteResult
           def initialize(command, stdout, stderr, exitstatus)
             @command = command
@@ -42,6 +29,10 @@ class Chef
           def error!
             raise "Error: '#{@command}' failed with exit code #{@exitstatus}.\nSTDOUT:#{@stdout}\nSTDERR:#{@stderr}" if @exitstatus != 0
           end
+        end
+
+        def remote?(_host_name)
+          false
         end
 
         def make_url_available_to_remote(local_url)

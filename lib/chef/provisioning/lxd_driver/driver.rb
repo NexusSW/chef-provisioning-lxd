@@ -1,11 +1,12 @@
-require 'chef/mash'
+require 'chef'
+require 'chef/provisioning'
 require 'chef/provisioning/driver'
 require 'chef/provisioning/transport/ssh'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/lxd_driver/version'
 require 'nexussw/lxd/driver'
-require 'chef/provisioning/lxd_driver/transport'
+require 'chef/provisioning/lxd_driver/lxd_transport'
 require 'pp'
 
 class Chef
@@ -16,25 +17,25 @@ class Chef
           Driver.new(url, config)
         end
 
+        # Port is optional and indicates the expected availability of the rest api
+        # If port is not specified, the CLI will be used and thus requires a transport if not localhost
         def self.canonicalize_url(driver_url, config)
           _, address, port = driver_url.split(':', 3)
           address ||= 'localhost'
-          port ||= 8443
-          ["lxd:#{address}:#{port}", config]
+          # port ||= 8443
+          retval = "lxd:#{address}"
+          retval += ':' + port if port
+          [retval, config]
         end
 
         def initialize(url, config)
           super(url, config)
-          # pp 'Driver Options: ', config
-          @lxd = NexusSW::LXD::Driver.new(host_address, clone_mash(driver_options))
+          options = clone_mash(driver_options)
+          options[:run_context] = run_context
+          @lxd = NexusSW::LXD::Driver.new(url, options)
         end
 
         attr_reader :lxd
-
-        def host_address
-          _, host, port = driver_url.split(':', 3)
-          "https://#{host}:#{port}"
-        end
 
         def host_name
           driver_url.split(':',3)[1]
@@ -69,19 +70,13 @@ class Chef
               }
             end
           end
-          @lxd.start_container_async machine_id
         end
 
         def ready_machine(action_handler, machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
-          if @lxd.container_status(machine_id) == 'stopped'
-            action_handler.perform_action "Starting container #{machine_id}" do
-              @lxd.start_container_async(machine_id)
-            end
-          end
 
           unless @lxd.container_status(machine_id) == 'running'
-            action_handler.perform_action "Waiting for container #{machine_id}" do
+            action_handler.perform_action "Starting container #{machine_id}" do
               @lxd.start_container(machine_id)
             end
           end

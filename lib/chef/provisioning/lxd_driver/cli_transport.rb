@@ -4,7 +4,7 @@ require 'chef/provisioning/lxd_dringer/local_transport'
 class Chef
   module Provisioning
     module LXDDriver
-      class HostedTransport < LXDTransport
+      class CLITransport < LXDTransport
         def initialize(driver, remote_transport, remote_id, machine_id, config = {})
           super(driver, remote_id ? "#{remote_id}:#{machine_id}" : machine_id, config)
           @inner_transport = remote_transport
@@ -96,6 +96,19 @@ class Chef
               tfile.unlink
             end
           end
+        end
+
+        def add_remote(host_name)
+          execute("add #{host_name} --accept-certificate", subcommand: 'remote').error! unless remote? host_name
+        end
+
+        def remote?(host_name)
+          result = execute 'list', subcommand: 'remote'
+          result.error!
+          result.stdout.each_line do |line|
+            return true if line.start_with? "| #{host_name} "
+          end
+          false
         end
       end
     end
