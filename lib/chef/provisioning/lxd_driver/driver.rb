@@ -82,7 +82,7 @@ class Chef
           end
 
           # Return the Machine object
-          machine_for(machine_spec, machine_options)
+          connect_to_machine(machine_spec, machine_options)
         end
 
         # machine_spec = Provisioning.chef_managed_entry_store ***(chef_server)*** .get(:machine, name)
@@ -118,7 +118,7 @@ class Chef
           end
         end
 
-        def machine_for(machine_spec, machine_options)
+        def connect_to_machine(machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
           # local transport is the most efficient so try it first, always
           transport = Chef::Provisioning::LXDDriver::LocalTransport.new(@lxd, machine_id, config) if host_name == 'localhost'
@@ -148,10 +148,6 @@ class Chef
           action_handler.perform_action "Stopping container #{machine_id}" do
             @lxd.stop_container(machine_id)
           end
-        end
-
-        def connect_to_machine(machine_spec, machine_options)
-          machine_for(machine_spec, machine_options)
         end
       end
     end
