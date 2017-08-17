@@ -81,7 +81,7 @@ class Chef
         end
 
         def make_url_available_to_remote(local_url)
-          @forwards = [] unless @forwards
+          @forwards = {} unless @forwards
           uri = URI(local_url)
           uri_scheme = uri.scheme unless uri.scheme == 'chefzero'
           host = Socket.getaddrinfo(uri.host, uri_scheme, nil, :STREAM)[0][3]
@@ -119,8 +119,10 @@ class Chef
         end
 
         def disconnect
-          @forwards.each(&:kill) if @forwards
-          @forwards = []
+          @forwards.each do |_url, th|
+            th.kill
+          end
+          @forwards = {}
         end
 
         protected

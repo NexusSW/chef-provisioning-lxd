@@ -1,9 +1,10 @@
 require 'nexussw/lxd/driver'
+require 'hyperkit'
 
 class NexusSW
   module LXD
     class Driver
-      class RestDriver < Driver
+      class Rest < Driver
         def initialize(rest_endpoint, driver_options)
           hkoptions = {}
           hkoptions = driver_options.clone if driver_options
@@ -41,9 +42,11 @@ class NexusSW
           end
         end
 
+        # TODO: that's the last of the async code - we can factor out the rest of the sync junk above.  nice try
         def create_container(container_name, container_options = {})
+          return if container_exists?(container_name)
           @hk.create_container(container_name, container_options)
-          start_container_async container_name
+          # start_container_async container_name
           container_name
         end
 
@@ -53,12 +56,14 @@ class NexusSW
 
         def start_container(container_id)
           waitforserver container_id
+          return if container_status(container_id) == 'running'
           @hk.start_container(container_id)
           waitforstatus container_id, 'running'
         end
 
         def stop_container(container_id)
           waitforserver container_id
+          return if container_status(container_id) == 'stopped'
           @hk.stop_container(container_id)
           waitforstatus container_id, 'stopped'
         end
@@ -85,6 +90,7 @@ class NexusSW
         end
 
         def container(container_id)
+          waitforserver container_id
           @hk.container container_id
         end
       end

@@ -1,51 +1,43 @@
 require 'spec_helper'
 
-# Prerequisites: 
-#   - LXD must be installed locally and listening on the default port
-#   - must have cert and key installed in .config/lxd/ by default,
-#       or otherwise specified in this constructor
-
 describe 'Chef Provisioning LXD Driver' do
-  let(:test_name) { 'lxd-chef-driver-test' }
-  let(:test_name2) { 'lxd-chef-driver-test2' }
-  let(:host_address) { 'https://localhost:8443' }
-  let(:lxd) { NexusSW::LXD::Driver.new host_address, verify_ssl: false }
-  let(:transport) { Chef::Provisioning::LXDDriver::LocalTransport.new lxd, test_name2 }
-  context 'Core Implementation' do
-    it 'has a version number' do
-      expect(NexusSW::LXD::VERSION).not_to be nil
-    end
+  let(:test_name) { 'lxd-chef-rest-driver-test' }
+  let(:driver_url) { 'lxd:localhost:8443' }
+  let(:driver) { Chef::Provisioning::LXDDriver::Driver.new driver_url, driver_options: {verify_ssl: false, disable_cli: true } }
+  let(:nx_driver) { driver.nx_driver}
 
+  it 'has a version number' do
+    expect(Chef::Provisioning::LXDDriver::VERSION).not_to be nil
+  end
+
+  context 'Rest Interface' do
     it 'detects a missing container' do
-      expect(lxd.container_exists?('idontexist')).not_to be true
+      expect(nx_driver.container_exists?('idontexist')).not_to be true
     end
 
-    it 'fails creating a container asynchronously with bad options' do
-      expect{ lxd.create_container('iwontexist', alias: 'ubububuntu-idontexist')}.to raise_error(Hyperkit::InternalServerError)
+    it 'fails creating a container with bad options' do
+      expect{ nx_driver.create_container('iwontexist', alias: 'ubububuntu-idontexist') }.to raise_error(Hyperkit::InternalServerError)
     end
 
     it 'creates a container' do
-      expect(lxd.create_container(test_name, alias: 'ubuntu-14.04')).to eq test_name
-      expect(lxd.create_container(test_name2, alias: 'ubuntu-14.04')).to eq test_name2
+      expect(nx_driver.create_container(test_name, alias: 'lts', server: 'https://cloud-images.ubuntu.com/releases', protocol: 'simplestreams')).to eq test_name
     end
 
     it 'detects an existing container' do
-      expect(lxd.container_exists?(test_name)).to be true
+      expect(nx_driver.container_exists?(test_name)).to be true
     end
 
-    it 'can start a container asynchronously' do
-      expect(lxd.start_container_async(test_name))
+    it 'can stop a container' do
+      nx_driver.stop_container test_name
+      expect(nx_driver.container_status(test_name)).to eq 'stopped'
     end
 
-    it 'can stop a container that is not yet running' do
-      lxd.stop_container test_name
-      expect(lxd.container_status(test_name)).to eq 'stopped'
+    it 'can start a container' do
+      nx_driver.start_container test_name
+      expect(nx_driver.container_status(test_name)).to eq 'running'
     end
 
-    it 'can start a container normally' do
-      lxd.start_container test_name2
-      expect(lxd.container_status(test_name2)).to eq 'running'
-    end
+    let(:transport) { driver.transport_strategy.guest_transport(test_name) }
 
     it 'can execute a command in the container' do
       expect{ transport.execute(['ls', '-al', '/']).error! }.not_to raise_error
@@ -73,9 +65,8 @@ describe 'Chef Provisioning LXD Driver' do
     end
 
     it 'can delete a running container' do
-      lxd.delete_container test_name2
-      expect(lxd.container_exists?(test_name2)).to be false
-      lxd.delete_container test_name
+      nx_driver.delete_container test_name
+      expect(nx_driver.container_exists?(test_name)).to be false
     end
   end
 end

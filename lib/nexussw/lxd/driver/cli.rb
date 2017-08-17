@@ -5,7 +5,7 @@ require 'json'
 class NexusSW
   module LXD
     class Driver
-      class CLIDriver < Driver
+      class CLI < Driver
         def initialize(inner_transport, driver_options)
           @inner_transport = inner_transport
           @driver_options = driver_options

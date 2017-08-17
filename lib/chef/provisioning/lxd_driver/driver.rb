@@ -1,13 +1,10 @@
 require 'chef'
 require 'chef/provisioning'
 require 'chef/provisioning/driver'
-require 'chef/provisioning/transport/ssh'
 require 'chef/provisioning/convergence_strategy/install_cached'
 require 'chef/provisioning/machine/unix_machine'
 require 'chef/provisioning/lxd_driver/version'
-require 'nexussw/lxd/driver'
-require 'chef/provisioning/lxd_driver/lxd_transport'
-require 'pp'
+require 'chef/provisioning/lxd_driver/transport_strategy'
 
 class Chef
   module Provisioning
@@ -30,28 +27,17 @@ class Chef
 
         def initialize(url, config)
           super(url, config)
-          options = clone_mash(driver_options)
-          options[:run_context] = run_context
-          @lxd = NexusSW::LXD::Driver.new(url, options)
+          @transport_strategy = TransportStrategy.new(self, config)
+          @nx_driver = @transport_strategy.host_driver
         end
 
-        attr_reader :lxd
-
-        def host_name
-          driver_url.split(':',3)[1]
-        end
-
-        def clone_mash(mash)
-          retval = {}
-          mash.each { |key, val| retval[key.to_sym] = val } if mash
-          retval
-        end
+        attr_reader :nx_driver, :transport_strategy
 
         def allocate_machine(action_handler, machine_spec, machine_options)
           machine_id = nil
           if machine_spec.reference
             machine_id = machine_spec.reference['machine_id']
-            unless @lxd.container_exists?(machine_id)
+            unless nx_driver.container_exists?(machine_id)
               # It doesn't really exist
               action_handler.perform_action "Container #{machine_id} does not really exist.  Recreating ..." do
                 machine_id = nil
@@ -59,25 +45,24 @@ class Chef
               end
             end
           end
-          unless machine_id
-            action_handler.perform_action "Creating container #{machine_spec.name} with options #{machine_options}" do
-              raise "Container #{machine_spec.name} already exists" if @lxd.container_exists?(machine_spec.name)
-              machine_id = @lxd.create_container(machine_spec.name, clone_mash(machine_options))
-              machine_spec.reference = {
-                'driver_url' => driver_url,
-                'driver_version' => LXDDriver::VERSION,
-                'machine_id' => machine_id,
-              }
-            end
+          return if machine_id
+          action_handler.perform_action "Creating container #{machine_spec.name} with options #{machine_options}" do
+            raise "Container #{machine_spec.name} already exists" if nx_driver.container_exists?(machine_spec.name)
+            machine_id = nx_driver.create_container(machine_spec.name, machine_options)
+            machine_spec.reference = {
+              'driver_url' => driver_url,
+              'driver_version' => LXDDriver::VERSION,
+              'machine_id' => machine_id,
+            }
           end
         end
 
         def ready_machine(action_handler, machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
 
-          unless @lxd.container_status(machine_id) == 'running'
+          unless nx_driver.container_status(machine_id) == 'running'
             action_handler.perform_action "Starting container #{machine_id}" do
-              @lxd.start_container(machine_id)
+              nx_driver.start_container(machine_id)
             end
           end
 
@@ -85,50 +70,9 @@ class Chef
           connect_to_machine(machine_spec, machine_options)
         end
 
-        # machine_spec = Provisioning.chef_managed_entry_store ***(chef_server)*** .get(:machine, name)
-        # returns [remote_id, remote_driver] where the 'remote_transport.execute' is called with:
-        #   lxc exec remote_id:machine_id -- blah blah blah
-        # if remote_id is specified, then remote_driver is an lxd driver that supports remote_id:machine_id
-        # anything returned from here 'might' need files punted to it.
-        def remoteinfo
-          return nil if host_name == 'localhost'
-          myhost_driver_url = run_context.chef_provisioning.chef_managed_entry_store.get(:machine, host_name).driver_url
-          # raise 'No path to host!  Invalid root node specified in the recipe' unless myhost_driver_url
-          return nil unless myhost_driver_url
-          myhost_driver = run_context.chef_provisioning.driver_for myhost_driver_url
-          # raise 'No path to host!  Invalid root node specified in the recipe' unless myhost_driver
-          return nil unless myhost_driver
-          # if we didn't make it this far, and we're not localhost, then likely a new root needs specified in the recipe
-          # fallback driver knows how to exec on my lxd host, but could be deeply nested hosted_transports with multiple 'punts'
-          retval = [nil, myhost_driver]
-          # look deeper for a linked server
-          loop do
-            # we hit a non-lxd driver - which makes no sense to continue in the 'nesting' context - and transport.remote? is lxd specific
-            return retval unless myhost_driver_url.start_with?('lxd:')
-            # coup de grâce
-            retval = [host_name, myhost_driver] if myhost_driver.transport.remote?(host_name) # keep looking deeper (closer)
-
-            # move next
-            myhost_driver_hostname = myhost_driver_url.split(':', 3)[1]
-            return retval if myhost_driver_hostname == 'localhost'
-            myhost_driver_url = run_context.chef_provisioning.chef_managed_entry_store.get(:machine, myhost_driver_hostname).driver_url
-            return retval unless myhost_driver_url
-            myhost_driver = run_context.chef_provisioning.driver_for myhost_driver_url
-            return retval unless myhost_driver
-          end
-        end
-
         def connect_to_machine(machine_spec, machine_options)
           machine_id = machine_spec.reference['machine_id']
-          # local transport is the most efficient so try it first, always
-          transport = Chef::Provisioning::LXDDriver::LocalTransport.new(@lxd, machine_id, config) if host_name == 'localhost'
-          transport ||= Chef::Provisioning::LXDDriver::RemoteTransport.new(@lxd, remote_id, machine_id, config) if @lxd.is_a? ***INSERTDISCRIMINATORHERE***
-          # hosted transports 'might' need one or more punts - use as a last resort
-          remote_id, remote_transport = remoteinfo(machine_spec, machine_options) unless transport
-          transport ||= Chef::Provisioning::LXDDriver::HostedTransport.new(@lxd, remote_transport, remote_id, machine_id, config) if remote_transport
-
-          raise 'No path to host!  Invalid root node specified in the recipe' unless transport
-
+          transport = @transport_strategy.guest_transport(machine_id, machine_options)
           convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'] || {}, config)
           Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport, convergence_strategy)
         end
@@ -137,7 +81,7 @@ class Chef
           return unless machine_spec.reference
           machine_id = machine_spec.reference['machine_id']
           action_handler.perform_action "Destroy container #{machine_id}" do
-            @lxd.delete_container(machine_id)
+            nx_driver.delete_container(machine_id)
             machine_spec.reference = nil
           end
         end
@@ -146,7 +90,7 @@ class Chef
           return unless machine_spec.reference
           machine_id = machine_spec.reference['machine_id']
           action_handler.perform_action "Stopping container #{machine_id}" do
-            @lxd.stop_container(machine_id)
+            nx_driver.stop_container(machine_id)
           end
         end
       end

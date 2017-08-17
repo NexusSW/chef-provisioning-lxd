@@ -1,3 +1,5 @@
+require 'chef'
+require 'chef/provisioning'
 require 'chef/provisioning/lxd_driver/transport/local'
 require 'chef/provisioning/lxd_driver/transport/cli'
 require 'chef/provisioning/lxd_driver/transport/rest'
@@ -59,7 +61,7 @@ class Chef
         end
 
         def guest_transport(container_name, container_options = {})
-          chef_server = container_options[:convergence_strategy][:chef_server] if container_options && container_options[:convergence_strategy]
+          chef_server = container_options['convergence_options'][:chef_server] if container_options && container_options['convergence_options']
           # Should never get this unless we're mis-coded
           raise 'Driver initialization incomplete.  The host driver must be resolved before we can resolve the guest transport.' unless nx_driver || host_driver(chef_server)
           # try localhost:linked first (most efficient - no punting)

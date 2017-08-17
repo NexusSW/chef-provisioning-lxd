@@ -6,7 +6,7 @@ class Chef
   module Provisioning
     module LXDDriver
       class Transport
-        class CLITransport < Transport
+        class CLI < Transport
           def initialize(driver, remote_transport, container_name, config = {})
             super(driver, container_name, config)
             @inner_transport = remote_transport
@@ -20,7 +20,9 @@ class Chef
             mycommand = "lxc #{subcommand} #{mycommand}"
             myoptions = options.clone
             myoptions.remove subcommand
-            inner_transport.execute mycommand, myoptions
+            with_streamoptions(myoptions) do |newoptions|
+              inner_transport.execute mycommand, newoptions
+            end
           end
 
           def read_file(path)
