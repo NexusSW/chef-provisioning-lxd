@@ -46,7 +46,7 @@ class NexusSW
           res = inner_transport.execute("lxc info #{container_id}")
           res.error!
           info = YAML.load res.stdout
-          info[:Status].downcase
+          info['Status'].downcase
         end
 
         def ensure_profiles(profiles = {})
@@ -78,6 +78,17 @@ class NexusSW
           end
         end
 
+        def convert_keys(oldhash, level = 1)
+          return {} unless oldhash
+          retval = {}
+          level -= 1
+          oldhash.each do |k, v|
+            retval[k.to_sym] = v unless level > 0
+            retval[k.to_sym] = convert_keys(v, level) if level > 0
+          end
+          retval
+        end
+
         def container(container_id)
           res = inner_transport.execute("lxc config show #{container_id}")
           res.error!
@@ -90,23 +101,28 @@ class NexusSW
           info = YAML.load res.stdout
 
           # rearrange to match the REST version
-          expanded[:expanded_config] = expanded[:config] || {}
-          expanded[:expanded_devices] = expanded[:devices] || {}
-          expanded.delete :config
-          expanded.delete :devices
+          expanded[:expanded_config] = expanded['config'] || {}
+          expanded[:expanded_devices] = expanded['devices'] || {}
+          expanded.delete 'config'
+          expanded.delete 'devices'
           config = expanded.merge config
 
           # add a few fields to more closely mimic the REST version
-          config[:created_at] = info[:Created]
+          config[:created_at] = info['Created']
           config[:name] = container_id
-          config[:status] = info[:Status]
-          STATUSCODES.each do |k, v|
+          config[:status] = info['Status']
+          STATUS_CODES.each do |k, v|
             if config[:status].downcase == v
               config[:status_code] = k
               break
             end
           end
-          config
+          retval = convert_keys(config)
+          retval[:config] = convert_keys(retval[:config])
+          retval[:expanded_config] = convert_keys(retval[:expanded_config])
+          retval[:devices] = convert_keys(retval[:devices], 2)
+          retval[:expanded_devices] = convert_keys(retval[:expanded_devices], 2)
+          retval
         end
 
         private

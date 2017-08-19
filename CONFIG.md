@@ -16,7 +16,7 @@ Settings Precedence:
 LXD Driver
     - uses Hyperkit::Client instances and NOT HK Module calls
     - supplies and overrides api_endpoint as derived from the driver name
-        format: 'lxd:localhost,8443' => 'https://localhost:8443'
+        format: 'lxd:localhost:8443' => 'https://localhost:8443'
     - accepts driver_options :verify_ssl, :client_cert, :client_key and passes them straight
         through to Hyperkit
     - will not pass through the unspecified HK configs

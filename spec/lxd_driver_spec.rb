@@ -3,8 +3,8 @@ require 'spec_helper'
 describe 'Chef Provisioning LXD Driver' do
   let(:test_name) { 'lxd-chef-rest-driver-test' }
   let(:driver_url) { 'lxd:localhost:8443' }
-  let(:driver) { Chef::Provisioning::LXDDriver::Driver.new driver_url, driver_options: {verify_ssl: false, disable_cli: true } }
-  let(:nx_driver) { driver.nx_driver}
+  let(:driver) { Chef::Provisioning::LXDDriver::Driver.new driver_url, driver_options: { verify_ssl: false, disable_rest: true } }
+  let(:nx_driver) { driver.nx_driver }
 
   it 'has a version number' do
     expect(Chef::Provisioning::LXDDriver::VERSION).not_to be nil
@@ -16,7 +16,7 @@ describe 'Chef Provisioning LXD Driver' do
     end
 
     it 'fails creating a container with bad options' do
-      expect{ nx_driver.create_container('iwontexist', alias: 'ubububuntu-idontexist') }.to raise_error(Hyperkit::InternalServerError)
+      expect { nx_driver.create_container('iwontexist', alias: 'ubububuntu-idontexist') }.to raise_error # (Hyperkit::InternalServerError)
     end
 
     it 'creates a container' do
@@ -27,11 +27,6 @@ describe 'Chef Provisioning LXD Driver' do
       expect(nx_driver.container_exists?(test_name)).to be true
     end
 
-    it 'can stop a container' do
-      nx_driver.stop_container test_name
-      expect(nx_driver.container_status(test_name)).to eq 'stopped'
-    end
-
     it 'can start a container' do
       nx_driver.start_container test_name
       expect(nx_driver.container_status(test_name)).to eq 'running'
@@ -40,7 +35,7 @@ describe 'Chef Provisioning LXD Driver' do
     let(:transport) { driver.transport_strategy.guest_transport(test_name) }
 
     it 'can execute a command in the container' do
-      expect{ transport.execute(['ls', '-al', '/']).error! }.not_to raise_error
+      expect { transport.execute(['ls', '-al', '/']).error! }.not_to raise_error
     end
 
     it 'remaps localhost to an adapter ip' do
@@ -49,19 +44,29 @@ describe 'Chef Provisioning LXD Driver' do
     end
 
     it 'can output to a file' do
-      expect{ transport.write_file('/tmp/somerandomfile.tmp', 'some random content') }.not_to raise_error
+      expect { transport.write_file('/tmp/somerandomfile.tmp', 'some random content') }.not_to raise_error
     end
 
     it 'can upload a file' do
-      expect{ transport.upload_file('/etc/passwd', '/tmp/passwd.tmp') }.not_to raise_error
+      expect { transport.upload_file('/etc/passwd', '/tmp/passwd.tmp') }.not_to raise_error
     end
 
     it 'can download a file' do
-      expect{ transport.download_file('/etc/group', '/tmp/rspectest.tmp') }.not_to raise_error
+      expect { transport.download_file('/etc/group', '/tmp/rspectest.tmp') }.not_to raise_error
     end
 
     it 'can read a file' do
       expect(transport.read_file('/tmp/passwd.tmp')).to include('root:')
+    end
+
+    it 'can stop a container' do
+      nx_driver.stop_container test_name
+      expect(nx_driver.container_status(test_name)).to eq 'stopped'
+    end
+
+    it 'can start a container' do
+      nx_driver.start_container test_name
+      expect(nx_driver.container_status(test_name)).to eq 'running'
     end
 
     it 'can delete a running container' do
