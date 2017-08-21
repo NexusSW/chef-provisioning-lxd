@@ -39,11 +39,7 @@ The above will work if 'hostname' was provisioned by your cookbook, and lxd is n
 
 Additionally, you can manually specify ssh details:
 ```ruby
-<<<<<<< HEAD
 with_driver 'lxd:hostname', driver_options: { ssh_user: '...', ssh_options: { ... } }
-=======
-with_driver 'lxd:hostname:8443', driver_options: { ssh_user: '...', ssh_options: { ... } }
->>>>>>> 026f944d6d437533297c34d2c36e768db5e671b0
 ```
 in a form expected by [Chef::Provisioning::Transport::SSH](https://github.com/chef/chef-provisioning/blob/master/lib/chef/provisioning/transport/ssh.rb)'s constructor.
 
