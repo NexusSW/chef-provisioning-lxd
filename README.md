@@ -1,36 +1,76 @@
-# Testgem
+# chef-provisioning-lxd
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/testgem`. To experiment with that code, run `bin/console` for an interactive prompt.
+This is a Chef Provisioning Driver for allocating containers in LXD.  It can run directly on the host running the provisioning cookbook as well as remotely either by issuing `lxc` CLI commands via an SSH connection, or via LXD's REST API, if it is enabled.
 
-TODO: Delete this and the text above, and describe your gem
+_The development of this gem is in parallel with a cookbook (not yet published) that will assist with some of the complexities of mutliple machine/container/nested container deployments._ __Coming Soon__
 
 ## Installation
 
-Add this line to your application's Gemfile:
+Add this line to your provisioning cookbook's Gemfile:
 
 ```ruby
-gem 'testgem'
+gem 'chef-provisioning-lxd'
 ```
 
-And then execute:
+Or if you're provisioning locally, you can execute (*__coming soon__*):
 
-    $ bundle
+    $ chef gem install chef-provisioning-lxd
 
-Or install it yourself as:
+## Quick Start
 
-    $ gem install testgem
+To create a container on your local machine:
+```ruby
+machine 'name' do
+  driver 'lxd:localhost'
+  machine_options alias: 'lts', server: 'https://cloud-images.ubuntu.com/releases', protocol: 'simplestreams'
+  ...
+end
+```
+
+The simplest remote invocation:
+```ruby
+machine 'name' do
+  driver 'lxd:hostname'
+  machine_options ...
+  ...
+end
+```
+The above will work if 'hostname' was provisioned by your cookbook, and lxd is now installed and configured.  This driver will 'make use' of the driver that provisioned 'hostname' to get access to its CLI.
+
+Additionally, you can manually specify ssh details:
+```ruby
+with_driver 'lxd:hostname:8443', driver_options: { ssh_user: '...', ssh_options: { ... } }
+```
+in a form expected by [Chef::Provisioning::Transport::SSH](https://github.com/chef/chef-provisioning/blob/master/lib/chef/provisioning/transport/ssh.rb)'s constructor.
+
+or if the REST API is enabled on 'hostname', then include the port number.  (*__Client Cert details TBD__*)
+```ruby
+machine 'name' do
+  driver 'lxd:hostname:8443'
+  machine_options ...
+  ...
+end
+```
 
 ## Usage
 
-TODO: Write usage instructions here
+`TODO: Fill this section out more completely`
 
-## Development
+This driver is effectively a wrapper around [Hyperkit](http://jeffshantz.github.io/hyperkit).  The quick and dirty answer (for now) is to refer to that and to the official [LXD REST API](https://github.com/lxc/lxd/blob/master/doc/rest-api.md) documentation to deduce the format of `driver_options` and `machine_options`.  There are some additional flags I introduce, but everything else gets sent straight down to the next layer.
 
-After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
+Unless you've taken the time to install a trusted certificate on your LXD host, you will have to disable SSL verification like this, before you can use the REST API:
 
-To install this gem onto your local machine, run `bundle exec rake install`. To release a new version, update the version number in `version.rb`, and then run `bundle exec rake release`, which will create a git tag for the version, push git commits and tags, and push the `.gem` file to [rubygems.org](https://rubygems.org).
+```ruby
+with_driver 'lxd:hostname:8443', driver_options: { verify_ssl: false }
+machine 'name' do
+  driver 'lxd:hostname:8443'
+  ...
+end
+```
+
+As soon as I'm sure this gem is working as intended, I'll document more thoroughly.  Until then, use this driver at your own risk.
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/[USERNAME]/testgem.
+Bug reports and pull requests are welcome on GitHub at https://github.com/nexussw/chef-provisioning-lxd.  Make sure you sign off on all of your commits.
 
