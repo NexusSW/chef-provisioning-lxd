@@ -144,14 +144,14 @@ class NexusSW
                     end
           # make sure these default entries are available to us even if config.yml isn't created yet
           # and i've seen instances where these defaults don't live in the config.yml
-          remotes = { remotes: {
-            images: { addr: 'https://images.linuxcontainers.org' },
-            ubuntu: { addr: 'https://cloud-images.ubuntu.com/releases' },
-            :'ubuntu-daily' => { addr: 'https://cloud-images.ubuntu.com/daily' },
+          remotes = { 'remotes' => {
+            'images' => { 'addr' => 'https://images.linuxcontainers.org' },
+            'ubuntu' => { 'addr' => 'https://cloud-images.ubuntu.com/releases' },
+            'ubuntu-daily' => { 'addr' => 'https://cloud-images.ubuntu.com/daily' },
           } }.merge remotes
           max = 0
-          remotes[:remotes].each do |remote, data|
-            return remote.to_s if data[:addr] == url
+          remotes['remotes'].each do |remote, data|
+            return remote.to_s if data['addr'] == url
             num = remote.to_s.split('-', 2)[1] if remote.to_s.start_with? 'images-'
             max = num.to_i if num && num.to_i > max
           end

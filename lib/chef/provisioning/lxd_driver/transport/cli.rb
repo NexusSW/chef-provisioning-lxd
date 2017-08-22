@@ -21,7 +21,7 @@ class Chef
             myoptions = options.clone
             myoptions.delete :subcommand
             with_streamoptions(myoptions) do |newoptions|
-              inner_transport.execute mycommand, newoptions
+              return inner_transport.execute mycommand, newoptions
             end
           end
 

@@ -53,8 +53,9 @@ class Chef
         #          :read_only => BOOLEAN - true if command is guaranteed not to
         #                        change system state (useful for Docker)
         def with_streamoptions(options = {}, &_)
-          stream_options = options.clone || {}
+          stream_options = options || {}
           unless (stream_options[:stream_stdout] && stream_options[:stream_stderr]) || stream_options[:stream]
+            stream_options = stream_options.clone
             stream_options[:stdout] = '' # StringIO.new
             stream_options[:stderr] = '' # StringIO.new
             stream_options[:stream] = lambda do |sout, serr|
@@ -103,14 +104,16 @@ class Chef
             @forwards[new_uri.to_s] = Thread.start do
               begin
                 Thread.current.abort_on_exception = true
-                proxy = SurroGate::Proxy.new config[:logger]
+                logger = Logger.new(STDERR)
+                logger.level = Logger::ERROR
+                proxy = SurroGate::Proxy.new logger # config[:logger]
                 loop do
                   container_conn = server.accept
                   server_conn = TCPSocket.new host, uri.port
                   proxy.push container_conn, server_conn
                 end
               ensure
-                @forwards.delete[new_uri.to_s]
+                @forwards.delete new_uri.to_s
               end
             end
           end

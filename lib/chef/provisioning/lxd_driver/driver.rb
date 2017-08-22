@@ -33,6 +33,12 @@ class Chef
 
         attr_reader :nx_driver, :transport_strategy
 
+        def to_hash(mash)
+          retval = {}
+          mash.each { |k, v| retval[k.to_sym] = v }
+          retval
+        end
+
         def allocate_machine(action_handler, machine_spec, machine_options)
           machine_id = nil
           if machine_spec.reference
@@ -48,7 +54,7 @@ class Chef
           return if machine_id
           action_handler.perform_action "Creating container #{machine_spec.name} with options #{machine_options}" do
             raise "Container #{machine_spec.name} already exists" if nx_driver.container_exists?(machine_spec.name)
-            machine_id = nx_driver.create_container(machine_spec.name, machine_options)
+            machine_id = nx_driver.create_container(machine_spec.name, to_hash(machine_options))
             machine_spec.reference = {
               'driver_url' => driver_url,
               'driver_version' => LXDDriver::VERSION,
