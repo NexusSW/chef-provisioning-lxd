@@ -63,7 +63,6 @@ Unless you've taken the time to install a trusted certificate on your LXD host, 
 ```ruby
 with_driver 'lxd:hostname:8443', driver_options: { verify_ssl: false }
 machine 'name' do
-  driver 'lxd:hostname:8443'
   ...
 end
 ```
