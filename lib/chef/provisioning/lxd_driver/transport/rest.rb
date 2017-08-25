@@ -54,6 +54,8 @@ class Chef
 
           def read_file(path)
             hk.read_file container_name, path
+          rescue Hyperkit::NotFound
+            return ''
           end
 
           def write_file(path, content)
@@ -69,21 +71,14 @@ class Chef
           end
 
           def host_ip
-            # is there a way to get this default adapter info via Socket api?  or would it be even dirtier?...
-            # or is not binding to an ip reliable in a multi-homed configuration?
-
-            # local = Local.new config
-            # res = local.execute("bash -c \"ip r | sed -n '/^default /s/^.*dev \(.*\)$/\1/p'\"")
-            # res.error!
-            # ifaddrs = Socket.getifaddrs.select do |iface|
-            #   iface.name == res.stdout && iface.addr.ip?
-            # end
-            # raise "Unable to get the IP address of the default Host Adapter: #{res.stdout}" if ifaddrs.empty?
-            # ifaddrs.first.addr.ip_address
-
-            # A couple of simple tests indicate that a default server socket bind should do the trick
-            # we'll do the 'default' interface trick above if this doesn't work in the field
-            nil
+            local = Local.new config
+            res = local.execute("bash -c \"ip r | sed -n '/^default /s/^.*dev \\(.*\\)$/\\1/p'\"")
+            res.error!
+            ifaddrs = Socket.getifaddrs.select do |iface|
+              (iface.name == res.stdout.strip) && iface.addr.ip?
+            end
+            raise "Unable to get the IP address of the default Host Adapter: #{res.stdout}" if ifaddrs.empty?
+            ifaddrs.first.addr.ip_address
           end
         end
       end

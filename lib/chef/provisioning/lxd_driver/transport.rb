@@ -86,13 +86,13 @@ class Chef
           uri = URI(local_url)
           uri_scheme = uri.scheme unless uri.scheme == 'chefzero'
           host = Socket.getaddrinfo(uri.host, uri_scheme, nil, :STREAM)[0][3]
-          new_uri = uri
+          new_uri = uri.clone
 
           if host == '127.0.0.1' || host == '::1'
 
             new_uri.host = host_ip
 
-            return new_uri.to_s if @forwards[new_uri.to_s]
+            return new_uri.to_s if @forwards[new_uri.to_s] || new_uri.host == '127.0.0.1' || new_uri.host == '::1'
 
             begin
               server = TCPServer.new new_uri.host, new_uri.port
@@ -122,6 +122,7 @@ class Chef
         end
 
         def disconnect
+          return unless @forwards
           @forwards.each do |_url, th|
             th.kill
           end
@@ -131,17 +132,7 @@ class Chef
         protected
 
         def host_ip
-          host_adapters = lxd.container(container_name)[:expanded_devices].select do |_k, v|
-            v[:type] == 'nic'
-          end
-          raise "Unable to determine which Host Adapter #{container_name} is connected to" if host_adapters.empty?
-          host_adapters = host_adapters.map { |_k, v| v[:parent] }
-          raise "Unable to determine which Host Adapter #{container_name} is connected to" unless host_adapters.any?
-          ifaddrs = Socket.getifaddrs.select do |iface|
-            host_adapters.index(iface.name) && iface.addr.ip?
-          end
-          raise "Unable to get the IP address of any connected Host Adapter: #{host_adapters}" if ifaddrs.empty?
-          ifaddrs.first.addr.ip_address
+          raise 'Transport.host_ip is not implemented'
         end
       end
     end

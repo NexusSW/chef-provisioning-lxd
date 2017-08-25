@@ -3,7 +3,7 @@ require 'spec_helper'
 describe 'Chef Provisioning LXD Driver' do
   let(:test_name) { 'lxd-chef-rest-driver-test' }
   let(:driver_url) { 'lxd:localhost:8443' }
-  let(:driver) { Chef::Provisioning::LXDDriver::Driver.new driver_url, driver_options: { verify_ssl: false, disable_rest: true } }
+  let(:driver) { Chef::Provisioning::LXDDriver::Driver.new driver_url, driver_options: { verify_ssl: false, disable_cli: true } }
   let(:nx_driver) { driver.nx_driver }
 
   it 'has a version number' do

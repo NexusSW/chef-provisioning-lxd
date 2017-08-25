@@ -108,6 +108,22 @@ class Chef
             end
             false
           end
+
+          protected
+
+          def host_ip
+            host_adapters = lxd.container(container_name)[:expanded_devices].select do |_k, v|
+              v[:type] == 'nic'
+            end
+            raise "Unable to determine which Host Adapter #{container_name} is connected to" if host_adapters.empty?
+            host_adapters = host_adapters.map { |_k, v| v[:parent] }
+            raise "Unable to determine which Host Adapter #{container_name} is connected to" unless host_adapters.any?
+            ifaddrs = Socket.getifaddrs.select do |iface|
+              host_adapters.index(iface.name) && iface.addr.ip?
+            end
+            raise "Unable to get the IP address of any connected Host Adapter: #{host_adapters}" if ifaddrs.empty?
+            ifaddrs.first.addr.ip_address
+          end
         end
       end
     end
