@@ -18,7 +18,8 @@ class Chef
             mycommand = command.is_a?(Array) ? command.join(' ') : command
             subcommand = options[:subcommand] || "exec #{container_name} --"
             mycommand = "lxc #{subcommand} #{mycommand}"
-            myoptions = options.clone
+            myoptions = options
+            myoptions = myoptions.clone if myoptions.key?(:subcommand)
             myoptions.delete :subcommand
             with_streamoptions(myoptions) do |newoptions|
               return inner_transport.execute mycommand, newoptions

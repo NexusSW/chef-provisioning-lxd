@@ -40,7 +40,7 @@ class Chef
 
         # Need to resolve the transports lazily just in case the host isn't provisioned yet
 
-        def host_driver(chef_server = {})
+        def host_driver(chef_server = nil)
           return nx_driver if nx_driver
           # We're preferring the rest driver due to policy and current/future available provisioning options
           @nx_driver = ::NexusSW::LXD::Driver::Rest.new(rest_endpoint, driver_options) if can_rest?
@@ -50,7 +50,8 @@ class Chef
 
           # This will call guest_transport on the host's:host's strategy instance if it is a managed lxd host
           # if it is a managed non-lxd host, this will return whatever transport the other driver deems appropriate
-          machine = run_context.chef_provisioning.connect_to_machine(hostname, chef_server || {})
+          chef_server ||= ::Chef.run_context.cheffish.current_chef_server
+          machine = ::Chef.run_context.chef_provisioning.connect_to_machine(hostname, chef_server || {})
           transport = machine.transport if machine
 
           # And if the host is unmanaged, we can at least attempt an SSH connection
@@ -82,7 +83,7 @@ class Chef
           # if we can't rest, then punting is unavoidable and take what we can get, but try to get as close to localhost as possible via cli remotes (links)
           # remoting requires machine.transport.is_a? Transport::CLI.  If it comes up as rest, or from some other driver, we're already as good as it gets so don't force it
           if can_cli?
-            machine = run_context.chef_provisioning.connect_to_machine(hostname, chef_server || {})
+            machine = ::Chef.run_context.chef_provisioning.connect_to_machine(hostname, chef_server)
             transport = Transport::CLI.new(nx_driver, machine.transport, container_name, config) if machine && machine.transport
             linked = transport.linked_transport(hostname) if transport
             return linked || transport if linked || transport

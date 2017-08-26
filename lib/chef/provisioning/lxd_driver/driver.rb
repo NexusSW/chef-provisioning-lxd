@@ -28,10 +28,14 @@ class Chef
         def initialize(url, config)
           super(url, config)
           @transport_strategy = TransportStrategy.new(self, config)
-          @nx_driver = @transport_strategy.host_driver
         end
 
-        attr_reader :nx_driver, :transport_strategy
+        attr_reader :transport_strategy
+
+        def nx_driver
+          @nx_driver ||= transport_strategy.host_driver
+          @nx_driver
+        end
 
         def to_hash(mash)
           retval = {}

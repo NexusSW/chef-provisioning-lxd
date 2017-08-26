@@ -1,4 +1,5 @@
 require 'nexussw/lxd/driver'
+require 'tempfile'
 require 'yaml'
 require 'json'
 
@@ -63,10 +64,10 @@ class NexusSW
             end
             next if found
             inner_transport.execute "lxc profile create #{name}"
-            tfile = TempFile.new name
+            tfile = Tempfile.new name
             tfile.close
             begin
-              inner_transport.write_file tfile.path, profile.to_yaml
+              inner_transport.write_file tfile.path, profile.to_hash.to_yaml
               begin
                 inner_transport.execute("bash -c 'cat #{tfile.path} | lxc profile edit #{name}'").error!
               ensure
@@ -138,7 +139,7 @@ class NexusSW
           port = url.split(':', 3)[2]
           url += ':8443' unless port || protocol != 'lxd'
           remotes = begin
-                      YAML.load(inner_transport.read_file('~/.config/lxc/config.yml'))
+                      YAML.load(inner_transport.read_file("#{ENV['HOME']}/.config/lxc/config.yml")) || {}
                     rescue
                       {}
                     end
