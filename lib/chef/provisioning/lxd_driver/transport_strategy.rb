@@ -63,12 +63,11 @@ class Chef
 
         def guest_transport(container_name, container_options = {})
           chef_server = container_options['convergence_options'][:chef_server] if container_options && container_options['convergence_options']
-          # Should never get this unless we're mis-coded
-          raise 'Driver initialization incomplete.  The host driver must be resolved before we can resolve the guest transport.' unless nx_driver || host_driver(chef_server)
+          chef_server ||= ::Chef.run_context.cheffish.current_chef_server
           # try localhost:linked first (most efficient - no punting)
           # preferring CLI in this context due to performance with nesting and that there's no difference in available options
           if can_cli?
-            cli = Transport::CLI.new(nx_driver, Transport::Local.new, container_name, config)
+            cli = Transport::CLI.new(Transport::Local.new, container_name, config)
             return cli if hostname == 'localhost'
             # localhost might not have lxd installed, nor be involved in provisioning (unmanaged).  But if it has a functioning lxd, use the remote, if available
             begin
@@ -79,17 +78,21 @@ class Chef
           end
           # next try rest api (always direct, but it serializes files - less efficient for larger files)
           # nx_driver MUST be Driver::Rest.  Right now it deterministically is, if can_rest?, but if the strategy changes, we'll have to force it
-          return Transport::Rest.new(nx_driver, container_name, config) if can_rest?
+          if can_rest?
+            # Should never get this unless we're mis-coded
+            raise 'Driver initialization incomplete.  The host driver must be resolved before we can resolve the guest transport.' unless nx_driver || host_driver(chef_server)
+            return Transport::Rest.new(nx_driver, container_name, config)
+          end
           # if we can't rest, then punting is unavoidable and take what we can get, but try to get as close to localhost as possible via cli remotes (links)
           # remoting requires machine.transport.is_a? Transport::CLI.  If it comes up as rest, or from some other driver, we're already as good as it gets so don't force it
           if can_cli?
-            machine = ::Chef.run_context.chef_provisioning.connect_to_machine(hostname, chef_server)
-            transport = Transport::CLI.new(nx_driver, machine.transport, container_name, config) if machine && machine.transport
+            machine = ::Chef.run_context.chef_provisioning.connect_to_machine(hostname, chef_server || {})
+            transport = Transport::CLI.new(machine.transport, container_name, config) if machine && machine.transport
             linked = transport.linked_transport(hostname) if transport
             return linked || transport if linked || transport
             # Blind fire an SSH connection to the host on the premise that it may be unmanaged
             hostssh = ::Chef::Provisioning::Transport::SSH.new(hostname, driver_options[:ssh_user], driver_options[:ssh_options], {}, config) if driver_options[:ssh_options] && driver_options[:ssh_user]
-            return Transport::CLI.new(nx_driver, hostssh, container_name, config) if hostssh
+            return Transport::CLI.new(hostssh, container_name, config) if hostssh
           end
           # And again, if for some reason the above doesn't work, we can at least attempt a direct SSH connection - user would have to supply a custom image with sshd running
           return ::Chef::Provisioning::Transport::SSH.new(container_name, container_options[:ssh_user], container_options[:ssh_options], {}, config) if container_options[:ssh_options] && container_options[:ssh_user]

@@ -37,7 +37,7 @@ class Chef
           @nx_driver
         end
 
-        def to_hash(mash)
+        def symbolize_keys(mash)
           retval = {}
           mash.each { |k, v| retval[k.to_sym] = v }
           retval
@@ -58,11 +58,13 @@ class Chef
           return if machine_id
           action_handler.perform_action "Creating container #{machine_spec.name} with options #{machine_options}" do
             raise "Container #{machine_spec.name} already exists" if nx_driver.container_exists?(machine_spec.name)
-            machine_id = nx_driver.create_container(machine_spec.name, to_hash(machine_options))
+            machine_id = nx_driver.create_container(machine_spec.name, symbolize_keys(machine_options))
             machine_spec.reference = {
               'driver_url' => driver_url,
               'driver_version' => LXDDriver::VERSION,
               'machine_id' => machine_id,
+              'driver_options' => driver_options,
+              'machine_options' => machine_options,
             }
           end
         end
