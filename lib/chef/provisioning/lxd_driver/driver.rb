@@ -34,7 +34,6 @@ class Chef
 
         def nx_driver
           @nx_driver ||= transport_strategy.host_driver
-          @nx_driver
         end
 
         def to_hash(mash)
@@ -82,7 +81,7 @@ class Chef
 
         def connect_to_machine(machine_spec, machine_options)
           machine_id = machine_spec.reference["machine_id"]
-          transport = @transport_strategy.guest_transport(machine_id, machine_options)
+          transport = transport_strategy.guest_transport(machine_id, machine_options)
           convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options["convergence_options"] || {}, config)
           Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport, convergence_strategy)
         end
