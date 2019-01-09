@@ -1,6 +1,6 @@
-require 'chef/provisioning/lxd_driver/transport'
-require 'chef/provisioning/lxd_driver/transport/local'
-require 'tempfile'
+require "chef/provisioning/lxd_driver/transport"
+require "chef/provisioning/lxd_driver/transport/local"
+require "tempfile"
 
 class Chef
   module Provisioning
@@ -15,7 +15,7 @@ class Chef
           attr_reader :inner_transport, :punt
 
           def execute(command, options = {})
-            mycommand = command.is_a?(Array) ? command.join(' ') : command
+            mycommand = command.is_a?(Array) ? command.join(" ") : command
             subcommand = options[:subcommand] || "exec #{container_name} --"
             mycommand = "lxc #{subcommand} #{mycommand}"
             myoptions = options
@@ -29,10 +29,10 @@ class Chef
           def read_file(path)
             tfile = Tempfile.new(container_name)
             tfile.close
-            retval = execute("#{@container_name}#{path} #{tfile.path}", subcommand: 'file pull')
-            return '' if retval.exitstatus == 1
+            retval = execute("#{@container_name}#{path} #{tfile.path}", subcommand: "file pull")
+            return "" if retval.exitstatus == 1
             retval.error!
-            return inner_transport.read_file tfile.path
+            inner_transport.read_file tfile.path
           ensure
             if tfile
               begin
@@ -47,7 +47,7 @@ class Chef
             tfile = Tempfile.new(container_name)
             tfile.close
             inner_transport.write_file tfile.path, content
-            execute("#{tfile.path} #{container_name}#{path}", subcommand: 'file push').error!
+            execute("#{tfile.path} #{container_name}#{path}", subcommand: "file push").error!
           ensure
             if tfile
               begin
@@ -62,7 +62,7 @@ class Chef
             tfile = Tempfile.new(container_name) if punt
             tfile.close if tfile
             localname = tfile ? tfile.path : local_path
-            execute("#{container_name}#{path} #{localname}", subcommand: 'file pull').error!
+            execute("#{container_name}#{path} #{localname}", subcommand: "file pull").error!
             inner_transport.download_file tfile.path, local_path if tfile
           ensure
             if tfile
@@ -79,7 +79,7 @@ class Chef
             tfile.close if tfile
             localname = tfile ? tfile.path : local_path
             inner_transport.upload_file local_path, tfile.path if tfile
-            execute("#{localname} #{container_name}#{path}", subcommand: 'file push').error!
+            execute("#{localname} #{container_name}#{path}", subcommand: "file push").error!
           ensure
             if tfile
               begin
@@ -91,7 +91,7 @@ class Chef
           end
 
           def add_remote(host_name)
-            execute("add #{host_name} --accept-certificate", subcommand: 'remote').error! unless remote? host_name
+            execute("add #{host_name} --accept-certificate", subcommand: "remote").error! unless remote? host_name
           end
 
           def linked_transport(host_name)
@@ -102,7 +102,7 @@ class Chef
           end
 
           def remote?(host_name)
-            result = execute 'list', subcommand: 'remote'
+            result = execute "list", subcommand: "remote"
             result.error!
             result.stdout.each_line do |line|
               return true if line.start_with? "| #{host_name} "
@@ -114,7 +114,7 @@ class Chef
 
           def host_ip
             host_adapters = lxd.container(container_name)[:expanded_devices].select do |_k, v|
-              v[:type] == 'nic'
+              v[:type] == "nic"
             end
             raise "Unable to determine which Host Adapter #{container_name} is connected to" if host_adapters.empty?
             host_adapters = host_adapters.map { |_k, v| v[:parent] }

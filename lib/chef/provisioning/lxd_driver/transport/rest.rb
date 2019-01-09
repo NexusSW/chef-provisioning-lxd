@@ -1,5 +1,5 @@
-require 'chef/provisioning/lxd_driver/transport'
-require 'pp'
+require "chef/provisioning/lxd_driver/transport"
+require "pp"
 
 class Chef
   module Provisioning
@@ -38,12 +38,12 @@ class Chef
             with_streamoptions(options) do |stream_options|
               retval = hk.execute_command(container_name, command, record_output: true)
               retval[:metadata][:output].each do |fd, log|
-                parts = log.split '/'
+                parts = log.split "/"
                 begin
                   chunk = hk.log(container_name, parts.last)
                   # pp '', '*** chunk ***', chunk, '**********'
-                  stream_chunk(stream_options, chunk, '') if fd.to_s == '1'
-                  stream_chunk(stream_options, '', chunk) if fd.to_s == '2'
+                  stream_chunk(stream_options, chunk, "") if fd.to_s == "1"
+                  stream_chunk(stream_options, "", chunk) if fd.to_s == "2"
                 ensure
                   hk.delete_log(container_name, parts.last)
                 end
@@ -55,7 +55,7 @@ class Chef
           def read_file(path)
             hk.read_file container_name, path
           rescue Hyperkit::NotFound
-            return ''
+            ""
           end
 
           def write_file(path, content)

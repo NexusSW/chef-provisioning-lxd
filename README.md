@@ -14,11 +14,12 @@ gem 'chef-provisioning-lxd'
 
 Or if you're provisioning locally, you can execute (*__coming soon__*):
 
-    $ chef gem install chef-provisioning-lxd
+    > chef gem install chef-provisioning-lxd
 
 ## Quick Start
 
 To create a container on your local machine:
+
 ```ruby
 machine 'name' do
   driver 'lxd:localhost'
@@ -28,6 +29,7 @@ end
 ```
 
 The simplest remote invocation:
+
 ```ruby
 machine 'name' do
   driver 'lxd:hostname'
@@ -35,15 +37,19 @@ machine 'name' do
   ...
 end
 ```
+
 The above will work if 'hostname' was provisioned by your cookbook, and lxd is now installed and configured.  This driver will 'make use' of the driver that provisioned 'hostname' to get access to its CLI.
 
 Additionally, you can manually specify ssh details:
+
 ```ruby
 with_driver 'lxd:hostname', driver_options: { ssh_user: '...', ssh_options: { ... } }
 ```
+
 in a form expected by [Chef::Provisioning::Transport::SSH](https://github.com/chef/chef-provisioning/blob/master/lib/chef/provisioning/transport/ssh.rb)'s constructor.
 
 or if the REST API is enabled on 'hostname', then include the port number.  (*__Client Cert details TBD__*)
+
 ```ruby
 machine 'name' do
   driver 'lxd:hostname:8443'
@@ -71,5 +77,4 @@ As soon as I'm sure this gem is working as intended, I'll document more thorough
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/nexussw/chef-provisioning-lxd.  Make sure you sign off on all of your commits.
-
+Bug reports and pull requests are welcome on [GitHub](https://github.com/nexussw/chef-provisioning-lxd).  Make sure you sign off on all of your commits.

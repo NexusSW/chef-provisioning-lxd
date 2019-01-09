@@ -1,5 +1,5 @@
-require 'chef/provisioning/lxd_driver/transport'
-require 'open3'
+require "chef/provisioning/lxd_driver/transport"
+require "open3"
 
 class Chef
   module Provisioning
@@ -7,7 +7,7 @@ class Chef
       class Transport
         class Local < Transport
           def initialize(config = {})
-            super self, 'local:', config
+            super self, "local:", config
           end
 
           def execute(command, options = {})
@@ -37,7 +37,7 @@ class Chef
           end
 
           def write_file(path, content)
-            File.open path, 'w' do |f|
+            File.open path, "w" do |f|
               f.write content
             end
           end

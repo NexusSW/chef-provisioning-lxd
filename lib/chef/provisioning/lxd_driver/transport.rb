@@ -1,6 +1,6 @@
-require 'chef/provisioning/transport'
-require 'surro-gate/lib/surro-gate/proxy'
-require 'socket'
+require "chef/provisioning/transport"
+require "surro-gate/lib/surro-gate/proxy"
+require "socket"
 
 class Chef
   module Provisioning
@@ -56,8 +56,8 @@ class Chef
           stream_options = options || {}
           unless (stream_options[:stream_stdout] && stream_options[:stream_stderr]) || stream_options[:stream]
             stream_options = stream_options.clone
-            stream_options[:stdout] = '' # StringIO.new
-            stream_options[:stderr] = '' # StringIO.new
+            stream_options[:stdout] = "" # StringIO.new
+            stream_options[:stderr] = "" # StringIO.new
             stream_options[:stream] = lambda do |sout, serr|
               stream_options[:stdout] += sout if sout
               stream_options[:stderr] += serr if serr
@@ -78,21 +78,21 @@ class Chef
         end
 
         def available?
-          lxd.container_status(container_name) == 'running'
+          lxd.container_status(container_name) == "running"
         end
 
         def make_url_available_to_remote(local_url)
           @forwards = {} unless @forwards
           uri = URI(local_url)
-          uri_scheme = uri.scheme unless uri.scheme == 'chefzero'
+          uri_scheme = uri.scheme unless uri.scheme == "chefzero"
           host = Socket.getaddrinfo(uri.host, uri_scheme, nil, :STREAM)[0][3]
           new_uri = uri.clone
 
-          if host == '127.0.0.1' || host == '::1'
+          if host == "127.0.0.1" || host == "::1"
 
             new_uri.host = host_ip
 
-            return new_uri.to_s if @forwards[new_uri.to_s] || new_uri.host == '127.0.0.1' || new_uri.host == '::1'
+            return new_uri.to_s if @forwards[new_uri.to_s] || new_uri.host == "127.0.0.1" || new_uri.host == "::1"
 
             begin
               server = TCPServer.new new_uri.host, new_uri.port
@@ -132,7 +132,7 @@ class Chef
         protected
 
         def host_ip
-          raise 'Transport.host_ip is not implemented'
+          raise "Transport.host_ip is not implemented"
         end
       end
     end

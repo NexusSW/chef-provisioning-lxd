@@ -1,5 +1,5 @@
-require 'nexussw/lxd/driver'
-require 'hyperkit'
+require "nexussw/lxd/driver"
+require "hyperkit"
 
 class NexusSW
   module LXD
@@ -51,34 +51,34 @@ class NexusSW
         end
 
         def start_container_async(container_id)
-          @waitlist << { id: @hk.start_container(container_id, sync: false).id, name: container_id, wait: 'running' }
+          @waitlist << { id: @hk.start_container(container_id, sync: false).id, name: container_id, wait: "running" }
         end
 
         def start_container(container_id)
           waitforserver container_id
-          return if container_status(container_id) == 'running'
+          return if container_status(container_id) == "running"
           @hk.start_container(container_id)
-          waitforstatus container_id, 'running'
+          waitforstatus container_id, "running"
         end
 
         def stop_container(container_id)
           waitforserver container_id
-          return if container_status(container_id) == 'stopped'
+          return if container_status(container_id) == "stopped"
           @hk.stop_container(container_id)
-          waitforstatus container_id, 'stopped'
+          waitforstatus container_id, "stopped"
         end
 
         def delete_container(container_id)
           waitforserver container_id
           return unless container_exists? container_id
           @hk.stop_container(container_id, force: true)
-          waitforstatus container_id, 'stopped'
+          waitforstatus container_id, "stopped"
           @hk.delete_container(container_id)
         end
 
         def container_status(container_id)
           waitforserver container_id
-          STATUS_CODES[@hk.container_state(container_id)['status_code'].to_i]
+          STATUS_CODES[@hk.container_state(container_id)["status_code"].to_i]
         end
 
         def ensure_profiles(profiles = {})

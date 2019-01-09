@@ -1,10 +1,10 @@
-require 'chef'
-require 'chef/provisioning'
-require 'chef/provisioning/driver'
-require 'chef/provisioning/convergence_strategy/install_cached'
-require 'chef/provisioning/machine/unix_machine'
-require 'chef/provisioning/lxd_driver/version'
-require 'chef/provisioning/lxd_driver/transport_strategy'
+require "chef"
+require "chef/provisioning"
+require "chef/provisioning/driver"
+require "chef/provisioning/convergence_strategy/install_cached"
+require "chef/provisioning/machine/unix_machine"
+require "chef/provisioning/lxd_driver/version"
+require "chef/provisioning/lxd_driver/transport_strategy"
 
 class Chef
   module Provisioning
@@ -17,11 +17,11 @@ class Chef
         # Port is optional and indicates the expected availability of the rest api
         # If port is not specified, the CLI will be used and thus requires a transport if not localhost
         def self.canonicalize_url(driver_url, config)
-          _, address, port = driver_url.split(':', 3)
-          address ||= 'localhost'
+          _, address, port = driver_url.split(":", 3)
+          address ||= "localhost"
           # port ||= 8443
           retval = "lxd:#{address}"
-          retval += ':' + port if port
+          retval += ":" + port if port
           [retval, config]
         end
 
@@ -46,7 +46,7 @@ class Chef
         def allocate_machine(action_handler, machine_spec, machine_options)
           machine_id = nil
           if machine_spec.reference
-            machine_id = machine_spec.reference['machine_id']
+            machine_id = machine_spec.reference["machine_id"]
             unless nx_driver.container_exists?(machine_id)
               # It doesn't really exist
               action_handler.perform_action "Container #{machine_id} does not really exist.  Recreating ..." do
@@ -60,17 +60,17 @@ class Chef
             raise "Container #{machine_spec.name} already exists" if nx_driver.container_exists?(machine_spec.name)
             machine_id = nx_driver.create_container(machine_spec.name, to_hash(machine_options))
             machine_spec.reference = {
-              'driver_url' => driver_url,
-              'driver_version' => LXDDriver::VERSION,
-              'machine_id' => machine_id,
+              "driver_url" => driver_url,
+              "driver_version" => LXDDriver::VERSION,
+              "machine_id" => machine_id,
             }
           end
         end
 
         def ready_machine(action_handler, machine_spec, machine_options)
-          machine_id = machine_spec.reference['machine_id']
+          machine_id = machine_spec.reference["machine_id"]
 
-          unless nx_driver.container_status(machine_id) == 'running'
+          unless nx_driver.container_status(machine_id) == "running"
             action_handler.perform_action "Starting container #{machine_id}" do
               nx_driver.start_container(machine_id)
             end
@@ -81,15 +81,15 @@ class Chef
         end
 
         def connect_to_machine(machine_spec, machine_options)
-          machine_id = machine_spec.reference['machine_id']
+          machine_id = machine_spec.reference["machine_id"]
           transport = @transport_strategy.guest_transport(machine_id, machine_options)
-          convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options['convergence_options'] || {}, config)
+          convergence_strategy = Chef::Provisioning::ConvergenceStrategy::InstallCached.new(machine_options["convergence_options"] || {}, config)
           Chef::Provisioning::Machine::UnixMachine.new(machine_spec, transport, convergence_strategy)
         end
 
         def destroy_machine(action_handler, machine_spec, _machine_options)
           return unless machine_spec.reference
-          machine_id = machine_spec.reference['machine_id']
+          machine_id = machine_spec.reference["machine_id"]
           action_handler.perform_action "Destroy container #{machine_id}" do
             nx_driver.delete_container(machine_id)
             machine_spec.reference = nil
@@ -98,7 +98,7 @@ class Chef
 
         def stop_machine(action_handler, machine_spec, _machine_options)
           return unless machine_spec.reference
-          machine_id = machine_spec.reference['machine_id']
+          machine_id = machine_spec.reference["machine_id"]
           action_handler.perform_action "Stopping container #{machine_id}" do
             nx_driver.stop_container(machine_id)
           end

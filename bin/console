@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 
-require 'bundler/setup'
+require "bundler/setup"
 # require 'nexussw/lxd/driver'
 # require 'chef/provisioning/lxd_driver/driver'
 
@@ -11,7 +11,7 @@ require 'bundler/setup'
 # require "pry"
 # Pry.start
 
-require 'irb'
+require "irb"
 IRB.start
 
 EOF

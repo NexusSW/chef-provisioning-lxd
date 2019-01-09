@@ -1,11 +1,11 @@
-require 'chef'
-require 'chef/provisioning'
-require 'chef/provisioning/lxd_driver/transport/local'
-require 'chef/provisioning/lxd_driver/transport/cli'
-require 'chef/provisioning/lxd_driver/transport/rest'
-require 'chef/provisioning/transport/ssh'
-require 'nexussw/lxd/driver/cli'
-require 'nexussw/lxd/driver/rest'
+require "chef"
+require "chef/provisioning"
+require "chef/provisioning/lxd_driver/transport/local"
+require "chef/provisioning/lxd_driver/transport/cli"
+require "chef/provisioning/lxd_driver/transport/rest"
+require "chef/provisioning/transport/ssh"
+require "nexussw/lxd/driver/cli"
+require "nexussw/lxd/driver/rest"
 
 class Chef
   module Provisioning
@@ -20,11 +20,11 @@ class Chef
         attr_reader :driver_url, :driver_options, :config, :nx_driver
 
         def hostname
-          driver_url.split(':', 3)[1]
+          driver_url.split(":", 3)[1]
         end
 
         def can_rest?
-          _, _, port = driver_url.split ':', 3
+          _, _, port = driver_url.split ":", 3
           port && !driver_options[:disable_rest]
         end
 
@@ -34,7 +34,7 @@ class Chef
 
         def rest_endpoint
           return nil unless can_rest?
-          _, host, port = driver_url.split ':', 3
+          _, host, port = driver_url.split ":", 3
           "https://#{host}:#{port}"
         end
 
@@ -45,7 +45,7 @@ class Chef
           # We're preferring the rest driver due to policy and current/future available provisioning options
           @nx_driver = ::NexusSW::LXD::Driver::Rest.new(rest_endpoint, driver_options) if can_rest?
           # I'd let this one be covered by the below logic, but 'localhost' is not likely managed
-          @nx_driver ||= ::NexusSW::LXD::Driver::CLI.new(Transport::Local.new, driver_options) if hostname == 'localhost' && can_cli?
+          @nx_driver ||= ::NexusSW::LXD::Driver::CLI.new(Transport::Local.new, driver_options) if hostname == "localhost" && can_cli?
           return nx_driver if nx_driver
 
           # This will call guest_transport on the host's:host's strategy instance if it is a managed lxd host
@@ -62,14 +62,14 @@ class Chef
         end
 
         def guest_transport(container_name, container_options = {})
-          chef_server = container_options['convergence_options'][:chef_server] if container_options && container_options['convergence_options']
+          chef_server = container_options["convergence_options"][:chef_server] if container_options && container_options["convergence_options"]
           # Should never get this unless we're mis-coded
-          raise 'Driver initialization incomplete.  The host driver must be resolved before we can resolve the guest transport.' unless nx_driver || host_driver(chef_server)
+          raise "Driver initialization incomplete.  The host driver must be resolved before we can resolve the guest transport." unless nx_driver || host_driver(chef_server)
           # try localhost:linked first (most efficient - no punting)
           # preferring CLI in this context due to performance with nesting and that there's no difference in available options
           if can_cli?
             cli = Transport::CLI.new(nx_driver, Transport::Local.new, container_name, config)
-            return cli if hostname == 'localhost'
+            return cli if hostname == "localhost"
             # localhost might not have lxd installed, nor be involved in provisioning (unmanaged).  But if it has a functioning lxd, use the remote, if available
             begin
               return cli.linked_transport(hostname) if cli.remote?(hostname)
