@@ -65,7 +65,7 @@ class Chef
             # And if the host is remote, we can at least attempt an SSH connection
             transport = ::Chef::Provisioning::Transport::SSH.new(hostname, driver_options[:ssh_user], driver_options[:ssh_options], {}, config) if driver_options[:ssh_options] && driver_options[:ssh_user]
             # TODO: this is wrong - we need an adapter for chefprov-ssh-transport => nexus-lxd-transport
-            #   maybe - i did model lxd transport after the chefprov transport
+            #   maybe - the nexus side doesn't do type checks and i did model the interface after the chefprov transport
             @nx_driver = ::NexusSW::LXD::Driver::CLI.new(transport) if transport
           end
           if nx_driver && is_nested?
