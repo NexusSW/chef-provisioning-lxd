@@ -80,7 +80,7 @@ class Chef
         def guest_transport(container_name)
           raise "Driver initialization incomplete.  The host driver must be resolved before we can resolve the guest transport." unless host_driver
 
-          Transport.new host_driver.transport_for(container_name)
+          Transport.new host_driver, host_driver.transport_for(container_name), config
         end
       end
     end
